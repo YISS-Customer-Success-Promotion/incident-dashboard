@@ -8,26 +8,29 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Meiryo', 'Yu Gothic', sans-serif; background: #F0F4F8; color: #1A2A3A; font-size: 13px; }
-
   header { background: #1E3A5F; color: #fff; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; }
   header h1 { font-size: 16px; font-weight: bold; }
   header .meta { font-size: 12px; color: #CADCFC; text-align: right; line-height: 1.6; }
 
-  /* 入力エリア */
-  #input-section { background: #fff; border-bottom: 2px solid #1E3A5F; padding: 16px 20px; }
-  #input-section h2 { font-size: 13px; font-weight: bold; color: #1E3A5F; margin-bottom: 8px; }
-  #input-section .hint { font-size: 11px; color: #4A6080; margin-bottom: 8px; line-height: 1.6; }
-  #input-section .controls { display: flex; gap: 10px; align-items: flex-start; }
-  #raw-input { flex: 1; height: 120px; font-size: 11px; font-family: monospace; border: 1px solid #B0C4D8; border-radius: 6px; padding: 8px; resize: vertical; }
-  .meta-inputs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
-  .meta-inputs label { font-size: 11px; color: #4A6080; }
-  .meta-inputs input { font-size: 12px; border: 1px solid #B0C4D8; border-radius: 4px; padding: 4px 8px; width: 140px; }
-  #btn-apply { background: #1E3A5F; color: #fff; border: none; border-radius: 6px; padding: 10px 24px; font-size: 13px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+  #input-section { background: #fff; border-bottom: 2px solid #1E3A5F; padding: 14px 20px; }
+  #input-section h2 { font-size: 13px; font-weight: bold; color: #1E3A5F; margin-bottom: 6px; }
+  .hint { font-size: 11px; color: #4A6080; margin-bottom: 10px; line-height: 1.7; }
+  .hint b { color: #1E3A5F; }
+  .format-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .tab-btn { padding: 5px 16px; font-size: 12px; border: 1px solid #B0C4D8; border-radius: 20px; cursor: pointer; background: #fff; color: #4A6080; }
+  .tab-btn.active { background: #1E3A5F; color: #fff; border-color: #1E3A5F; }
+  .meta-inputs { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .meta-inputs .field label { font-size: 11px; color: #4A6080; display: block; margin-bottom: 3px; }
+  .meta-inputs .field input { font-size: 12px; border: 1px solid #B0C4D8; border-radius: 4px; padding: 4px 8px; width: 150px; }
+  .meta-note { font-size: 11px; color: #888; margin-left: 4px; }
+  .controls { display: flex; gap: 10px; align-items: flex-start; }
+  #raw-input { flex: 1; height: 110px; font-size: 11px; font-family: monospace; border: 1px solid #B0C4D8; border-radius: 6px; padding: 8px; resize: vertical; }
+  #btn-apply { background: #1E3A5F; color: #fff; border: none; border-radius: 6px; padding: 10px 22px; font-size: 13px; font-weight: bold; cursor: pointer; white-space: nowrap; min-width: 90px; }
   #btn-apply:hover { background: #2C5282; }
+  #error-msg { color: #E24B4A; font-size: 12px; margin-top: 8px; display: none; padding: 6px 10px; background: #FFF0F0; border-radius: 4px; }
+  #format-badge { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 99px; margin-left: 8px; background: #EEF3F9; color: #1E3A5F; vertical-align: middle; }
 
   .container { max-width: 1280px; margin: 0 auto; padding: 14px 16px; }
-
-  /* ダッシュボード（初期非表示） */
   #dashboard { display: none; }
 
   .metrics { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 14px; }
@@ -45,10 +48,10 @@
   .alert.danger { background: #FFF0F0; border-color: #E24B4A; }
   .alert.danger .alert-title { color: #7A1212; }
   .alert.danger .alert-body  { color: #9B3030; }
-  .alert.warn   { background: #FFF5E6; border-color: #BA7517; }
+  .alert.warn { background: #FFF5E6; border-color: #BA7517; }
   .alert.warn .alert-title { color: #5C3000; }
   .alert.warn .alert-body  { color: #7A4A00; }
-  .alert.ok     { background: #E8F8F2; border-color: #1D9E75; }
+  .alert.ok { background: #E8F8F2; border-color: #1D9E75; }
   .alert.ok .alert-title { color: #0A4A30; }
   .alert.ok .alert-body  { color: #145C3A; }
 
@@ -63,16 +66,14 @@
   th { background: #1E3A5F; color: #fff; padding: 6px 8px; text-align: center; font-size: 10px; white-space: nowrap; }
   td { padding: 5px 8px; border-bottom: 0.5px solid #E0E8F0; text-align: center; white-space: nowrap; }
   td.svc { text-align: left; font-weight: bold; }
-  tr:nth-child(even) { background: #F5F8FC; }
-  tr.total-row { background: #EEF3F9 !important; font-weight: bold; }
+  tr:nth-child(even) td { background: #F5F8FC; }
+  tr.total-row td { background: #EEF3F9 !important; font-weight: bold; }
   .badge { display: inline-block; font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 99px; }
   .badge.danger { background: #FCEBEB; color: #A32D2D; border: 1px solid #E24B4A; }
   .badge.warn   { background: #FAEEDA; color: #7A4A00; border: 1px solid #BA7517; }
   .badge.ok     { background: #E1F5EE; color: #0F6E56; border: 1px solid #1D9E75; }
   .action-table td { text-align: left; }
   .action-table td.center { text-align: center; }
-
-  #error-msg { color: #E24B4A; font-size: 12px; margin-top: 8px; display: none; }
   footer { text-align: center; font-size: 10px; color: #888; padding: 16px; }
 </style>
 </head>
@@ -83,29 +84,29 @@
   <div class="meta" id="header-meta">データを貼り付けて「反映」を押してください</div>
 </header>
 
-<!-- 入力エリア -->
 <div id="input-section">
-  <h2>データ入力</h2>
+  <h2>データ入力 <span id="format-badge">自動判定</span></h2>
   <div class="hint">
-    Excelからコピーしたテキスト（残数・受付・完了の3表）をそのまま貼り付けて「反映」を押してください。<br>
-    ※ 表と表の間に「受付(日付)」「完了(日付)」などの見出し行があっても自動で読み飛ばします。
+    <b>【CSV形式】</b> Excelで「名前を付けて保存→CSV」して中身をコピー＆ペースト<br>
+    <b>【テキスト形式】</b> Excelのセル範囲を直接コピー＆ペースト（タブ区切り・カンマ区切り両対応）<br>
+    どちらの形式も自動で判定します。
   </div>
   <div class="meta-inputs">
-    <div>
-      <label>対象週　</label><br>
-      <input type="text" id="meta-week" placeholder="例: 6/8〜6/19" value="">
+    <div class="field">
+      <label>対象週</label>
+      <input type="text" id="meta-week" placeholder="例: 6/8〜6/19">
     </div>
-    <div>
-      <label>スナップショット日</label><br>
-      <input type="text" id="meta-date" placeholder="例: 6/16" value="">
+    <div class="field">
+      <label>スナップショット日</label>
+      <input type="text" id="meta-date" placeholder="例: 6/16">
     </div>
-    <div>
-      <label>残数合計（障害・イベント除く）</label><br>
-      <input type="number" id="meta-total" placeholder="例: 260" value="">
+    <div class="field">
+      <label>残数（障害・イベント除く）<span class="meta-note">※CSV形式は自動取得</span></label>
+      <input type="number" id="meta-total" placeholder="例: 260">
     </div>
   </div>
   <div class="controls">
-    <textarea id="raw-input" placeholder="ここにExcelからコピーしたテキストを貼り付け..."></textarea>
+    <textarea id="raw-input" placeholder="ここにデータを貼り付け...（CSV・Excelテキスト両対応）"></textarea>
     <button id="btn-apply" onclick="applyData()">▶ 反映</button>
   </div>
   <div id="error-msg"></div>
@@ -139,34 +140,71 @@
     </div>
   </div>
 </div>
-
 <footer id="footer">CS推進部 インシデントダッシュボード</footer>
 
 <script>
 const COLS = ['障害','イベント','問い合わせ','定例運用','非定例運用','相談','クレーム','作業依頼'];
 const C = { blue:'#378ADD', teal:'#1D9E75', red:'#E24B4A', amber:'#BA7517', coral:'#D85A30', purple:'#7F77DD', gray:'#888780' };
-
 let chartInstances = {};
 
-// =====================
-// テキストパーサー
-// =====================
-function parseRawText(text) {
-  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+// ===========================
+// CSV形式パーサー
+// type,service,障害,イベント,...
+// ===========================
+function parseCSVFormat(text) {
+  const lines = text.trim().split('\n').map(l => l.trim()).filter(l => l);
+  const headers = lines[0].split(',').map(h => h.trim());
+  const typeIdx    = headers.indexOf('type');
+  const serviceIdx = headers.indexOf('service');
 
-  // ヘッダー行のパターン
-  const isHeader = l => /サービス名/.test(l);
-  // 合計行
-  const isTotal  = l => /^合計/.test(l);
-  // セクション見出し（残数/受付/完了）
-  const isSection = l => !l.includes(',') || isHeader(l);
+  const meta = {};
+  const zansu = [], uketsuke = [], kanryo = [];
 
-  const sections = { 残数: [], 受付: [], 完了: [] };
+  lines.slice(1).forEach(line => {
+    const cells = line.split(',').map(c => c.trim());
+    const type = cells[typeIdx];
+    const svc  = cells[serviceIdx];
+    if (!type || !svc) return;
+
+    if (type === 'meta') { meta[svc] = cells[2] || ''; return; }
+
+    const row = { service: svc };
+    COLS.forEach(col => {
+      const idx = headers.indexOf(col);
+      row[col] = idx >= 0 ? (parseInt(cells[idx]) || 0) : 0;
+    });
+
+    if (type === '残数') zansu.push(row);
+    else if (type === '受付') uketsuke.push(row);
+    else if (type === '完了') kanryo.push(row);
+  });
+
+  // metaからフォームに反映
+  if (meta['week'])          document.getElementById('meta-week').value  = meta['week'];
+  if (meta['snapshot_date']) document.getElementById('meta-date').value  = meta['snapshot_date'];
+  if (meta['total_excl'])    document.getElementById('meta-total').value = meta['total_excl'];
+
+  return { zansu, uketsuke, kanryo };
+}
+
+// ===========================
+// テキスト形式パーサー
+// Excelからそのままコピー
+// ===========================
+function parseTextFormat(text) {
+  // タブ区切りをカンマに統一
+  const normalized = text.replace(/\t/g, ',');
+  const lines = normalized.split('\n').map(l => l.trim()).filter(l => l);
+
+  const isHeader  = l => /サービス名/.test(l);
+  const isTotal   = l => /^合計/.test(l);
+
+  const zansu = [], uketsuke = [], kanryo = [];
   let currentType = '残数';
 
   for (const line of lines) {
-    if (/受[付け]/.test(line) && !isHeader(line)) { currentType = '受付'; continue; }
-    if (/完了/.test(line) && !isHeader(line)) { currentType = '完了'; continue; }
+    if (/受[付け]/.test(line) && !isHeader(line) && !line.includes('サービス')) { currentType = '受付'; continue; }
+    if (/完了/.test(line) && !isHeader(line) && !line.includes('サービス'))     { currentType = '完了'; continue; }
     if (isHeader(line) || isTotal(line)) continue;
 
     const cells = line.split(',').map(c => c.trim());
@@ -174,186 +212,191 @@ function parseRawText(text) {
     const svc = cells[0];
     if (!svc) continue;
 
-    // 列マッピング: サービス名, 障害, イベント, 小計, 問い合わせ, 定例運用, 非定例運用, 相談, クレーム, 作業依頼, 小計, 合計
+    // 列: サービス名, 障害, イベント, 小計, 問い合わせ, 定例運用, 非定例運用, 相談, クレーム, 作業依頼
     const row = {
-      service:  svc,
-      障害:     parseInt(cells[1]) || 0,
-      イベント: parseInt(cells[2]) || 0,
+      service:    svc,
+      障害:       parseInt(cells[1]) || 0,
+      イベント:   parseInt(cells[2]) || 0,
       問い合わせ: parseInt(cells[4]) || 0,
-      定例運用: parseInt(cells[5]) || 0,
+      定例運用:   parseInt(cells[5]) || 0,
       非定例運用: parseInt(cells[6]) || 0,
-      相談:     parseInt(cells[7]) || 0,
-      クレーム: parseInt(cells[8]) || 0,
-      作業依頼: parseInt(cells[9]) || 0,
+      相談:       parseInt(cells[7]) || 0,
+      クレーム:   parseInt(cells[8]) || 0,
+      作業依頼:   parseInt(cells[9]) || 0,
     };
-    sections[currentType].push(row);
+
+    if (currentType === '残数')     zansu.push(row);
+    else if (currentType === '受付') uketsuke.push(row);
+    else if (currentType === '完了') kanryo.push(row);
   }
-  return sections;
+  return { zansu, uketsuke, kanryo };
 }
 
-function sum(row) { return COLS.reduce((a, c) => a + (row[c] || 0), 0); }
-function sumExcl(row) {
-  return ['問い合わせ','定例運用','非定例運用','相談','クレーム','作業依頼'].reduce((a,c)=>a+(row[c]||0),0);
+// ===========================
+// フォーマット自動判定
+// ===========================
+function detectAndParse(text) {
+  const firstLine = text.trim().split('\n')[0];
+  if (/^type,service/.test(firstLine)) {
+    document.getElementById('format-badge').textContent = 'CSV形式を検出';
+    document.getElementById('format-badge').style.background = '#E1F5EE';
+    document.getElementById('format-badge').style.color = '#0F6E56';
+    return parseCSVFormat(text);
+  } else {
+    document.getElementById('format-badge').textContent = 'テキスト形式を検出';
+    document.getElementById('format-badge').style.background = '#EEF3F9';
+    document.getElementById('format-badge').style.color = '#1E3A5F';
+    return parseTextFormat(text);
+  }
 }
 
-// =====================
-// チャート破棄ヘルパー
-// =====================
+// ===========================
+// 集計ヘルパー
+// ===========================
+function sum(row)     { return COLS.reduce((a,c) => a + (row[c]||0), 0); }
+function sumExcl(row) { return ['問い合わせ','定例運用','非定例運用','相談','クレーム','作業依頼'].reduce((a,c)=>a+(row[c]||0),0); }
+
 function destroyChart(id) {
   if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
 }
 
-// =====================
+// ===========================
 // メイン描画
-// =====================
+// ===========================
 function applyData() {
-  const text = document.getElementById('raw-input').value;
+  const text  = document.getElementById('raw-input').value;
   const errEl = document.getElementById('error-msg');
   errEl.style.display = 'none';
 
   if (!text.trim()) {
-    errEl.textContent = 'テキストを貼り付けてください。';
-    errEl.style.display = 'block';
-    return;
+    errEl.textContent = 'データを貼り付けてください。';
+    errEl.style.display = 'block'; return;
   }
 
   let sections;
-  try { sections = parseRawText(text); } catch(e) {
+  try { sections = detectAndParse(text); }
+  catch(e) {
     errEl.textContent = '解析エラー: ' + e.message;
-    errEl.style.display = 'block';
-    return;
+    errEl.style.display = 'block'; return;
   }
 
-  const { 残数: zansu, 受付: uketsuke, 完了: kanryo } = sections;
+  const { zansu, uketsuke, kanryo } = sections;
   if (zansu.length === 0 && uketsuke.length === 0) {
-    errEl.textContent = 'データが読み取れませんでした。フォーマットを確認してください。';
-    errEl.style.display = 'block';
-    return;
+    errEl.textContent = 'データが読み取れませんでした。形式を確認してください。';
+    errEl.style.display = 'block'; return;
   }
 
-  const week     = document.getElementById('meta-week').value || '（週未設定）';
-  const snapDate = document.getElementById('meta-date').value || '（日付未設定）';
+  const week      = document.getElementById('meta-week').value  || '（週未設定）';
+  const snapDate  = document.getElementById('meta-date').value  || '（日付未設定）';
   const totalExclInput = parseInt(document.getElementById('meta-total').value) || 0;
 
   document.getElementById('header-meta').textContent = `対象週：${week}　スナップショット：${snapDate}`;
   document.getElementById('dashboard').style.display = 'block';
 
-  const services = zansu.length > 0 ? zansu.map(r => r.service) : uketsuke.map(r => r.service);
+  const services = zansu.length > 0 ? zansu.map(r=>r.service) : uketsuke.map(r=>r.service);
 
-  const totalUketsuke = uketsuke.reduce((a, r) => a + sum(r), 0);
-  const totalKanryo   = kanryo.reduce((a, r) => a + sum(r), 0);
-  const totalZansu    = zansu.reduce((a, r) => a + sum(r), 0);
-  const totalZansuExcl = zansu.reduce((a, r) => a + sumExcl(r), 0);
+  const totalUketsuke  = uketsuke.reduce((a,r)=>a+sum(r),0);
+  const totalKanryo    = kanryo.reduce((a,r)=>a+sum(r),0);
+  const totalZansu     = zansu.reduce((a,r)=>a+sum(r),0);
+  const totalZansuExcl = zansu.reduce((a,r)=>a+sumExcl(r),0);
   const diff = totalUketsuke - totalKanryo;
+  const totalExcl = totalExclInput || totalZansuExcl;
 
   // ---- メトリクス ----
-  const totalExcl = totalExclInput || totalZansuExcl;
-  const metricsData = [
-    { label: `残数（${snapDate}・障害/イベント除く）`, val: totalExcl + '件', cls: '' },
-    { label: '残数合計（全カテゴリ）', val: totalZansu + '件', cls: '' },
-    { label: '受付（週間）', val: totalUketsuke + '件', cls: '' },
-    { label: '完了（週間）', val: totalKanryo + '件',   cls: '' },
-    { label: '週間差分（受付−完了）', val: (diff >= 0 ? '+' : '') + diff + '件',
-      cls: diff > 0 ? 'up' : 'down', sub: diff > 0 ? '積み残し増' : '消化超過' },
-  ];
-  document.getElementById('metrics').innerHTML = metricsData.map(m =>
-    `<div class="metric">
-      <div class="metric-label">${m.label}</div>
-      <div class="metric-val ${m.cls||''}">${m.val}</div>
-      ${m.sub ? `<div class="metric-sub">${m.sub}</div>` : ''}
-    </div>`).join('');
+  document.getElementById('metrics').innerHTML = [
+    { label:`残数（${snapDate}・障害/イベント除く）`, val: totalExcl+'件', cls:'' },
+    { label:'残数合計（全カテゴリ）',  val: totalZansu+'件',     cls:'' },
+    { label:'受付（週間）',            val: totalUketsuke+'件',  cls:'' },
+    { label:'完了（週間）',            val: totalKanryo+'件',    cls:'' },
+    { label:'週間差分（受付−完了）',
+      val: (diff>=0?'+':'')+diff+'件',
+      cls: diff>0?'up':'down',
+      sub: diff>0?'積み残し増':'消化超過' },
+  ].map(m=>`<div class="metric">
+    <div class="metric-label">${m.label}</div>
+    <div class="metric-val ${m.cls||''}">${m.val}</div>
+    ${m.sub?`<div class="metric-sub">${m.sub}</div>`:''}
+  </div>`).join('');
 
   // ---- アラート ----
-  const svcStats = services.map(svc => {
-    const z = zansu.find(r => r.service === svc) || {};
-    const u = uketsuke.find(r => r.service === svc) || {};
-    const k = kanryo.find(r => r.service === svc) || {};
-    return { svc, uTotal: sum(u), kTotal: sum(k),
-      zFault: (z['障害']||0) + (z['イベント']||0), diff: sum(u) - sum(k) };
-  }).sort((a,b) => (b.zFault + b.uTotal) - (a.zFault + a.uTotal));
+  const svcStats = services.map(svc=>{
+    const z=zansu.find(r=>r.service===svc)||{};
+    const u=uketsuke.find(r=>r.service===svc)||{};
+    const k=kanryo.find(r=>r.service===svc)||{};
+    return { svc, uTotal:sum(u), kTotal:sum(k),
+      zFault:(z['障害']||0)+(z['イベント']||0), diff:sum(u)-sum(k) };
+  }).sort((a,b)=>(b.zFault+b.uTotal)-(a.zFault+a.uTotal));
 
-  const alertItems = [];
-  svcStats.forEach(s => {
-    if (s.zFault >= 3) alertItems.push({ cls:'danger', title:`[要対応] ${s.svc}`, body:`障害・イベント残数 ${s.zFault}件。週間受付 ${s.uTotal}件 / 完了 ${s.kTotal}件。` });
-    else if (s.diff > 2) alertItems.push({ cls:'warn', title:`[注視] ${s.svc}`, body:`受付 ${s.uTotal}件 > 完了 ${s.kTotal}件（差分 +${s.diff}件）。` });
-    else if (s.kTotal > s.uTotal && s.kTotal >= 3) alertItems.push({ cls:'ok', title:`[順調] ${s.svc}`, body:`受付 ${s.uTotal}件 < 完了 ${s.kTotal}件。積み残し解消が進んでいます。` });
+  const alertItems=[];
+  svcStats.forEach(s=>{
+    if(s.zFault>=3) alertItems.push({cls:'danger',title:`[要対応] ${s.svc}`,body:`障害・イベント残数 ${s.zFault}件。週間受付 ${s.uTotal}件 / 完了 ${s.kTotal}件。`});
+    else if(s.diff>2) alertItems.push({cls:'warn',title:`[注視] ${s.svc}`,body:`受付 ${s.uTotal}件 > 完了 ${s.kTotal}件（差分 +${s.diff}件）。`});
+    else if(s.kTotal>s.uTotal&&s.kTotal>=3) alertItems.push({cls:'ok',title:`[順調] ${s.svc}`,body:`受付 ${s.uTotal}件 < 完了 ${s.kTotal}件。積み残し解消が進んでいます。`});
   });
-  if (alertItems.length === 0) alertItems.push({ cls:'ok', title:'今週は要対応サービスなし', body:'全サービス正常範囲内です。' });
-  if (alertItems.length % 2 !== 0) alertItems.push({ cls:'ok', title:'全体サマリー', body:`受付合計 ${totalUketsuke}件 / 完了合計 ${totalKanryo}件。差分 ${diff > 0 ? '+' : ''}${diff}件。` });
-  document.getElementById('alerts').innerHTML = alertItems.slice(0,4).map(a =>
+  if(alertItems.length===0) alertItems.push({cls:'ok',title:'今週は要対応サービスなし',body:'全サービス正常範囲内です。'});
+  if(alertItems.length%2!==0) alertItems.push({cls:'ok',title:'全体サマリー',body:`受付合計 ${totalUketsuke}件 / 完了合計 ${totalKanryo}件。差分 ${diff>=0?'+':''}${diff}件。`});
+  document.getElementById('alerts').innerHTML = alertItems.slice(0,4).map(a=>
     `<div class="alert ${a.cls}"><div class="alert-title">${a.title}</div><div class="alert-body">${a.body}</div></div>`).join('');
 
   // ---- グラフ ----
-  destroyChart('zansu'); destroyChart('rcbar'); destroyChart('donut');
+  ['zansu','rcbar','donut'].forEach(destroyChart);
 
-  const zansuExclVals = services.map(svc => sumExcl(zansu.find(r=>r.service===svc)||{}));
-  chartInstances['zansu'] = new Chart(document.getElementById('chart-zansu'), {
-    type: 'bar',
-    data: { labels: services, datasets: [{ label:'残数', data: zansuExclVals, backgroundColor: C.blue }] },
-    options: { responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false} },
-      scales:{ x:{ticks:{font:{size:9},maxRotation:45}}, y:{ticks:{font:{size:9}}} } }
+  chartInstances['zansu'] = new Chart(document.getElementById('chart-zansu'),{
+    type:'bar',
+    data:{ labels:services, datasets:[{label:'残数',data:services.map(s=>sumExcl(zansu.find(r=>r.service===s)||{})),backgroundColor:C.blue}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{font:{size:9},maxRotation:45}},y:{ticks:{font:{size:9}}}}}
   });
 
-  const uVals = services.map(svc => sum(uketsuke.find(r=>r.service===svc)||{}));
-  const kVals = services.map(svc => sum(kanryo.find(r=>r.service===svc)||{}));
-  chartInstances['rcbar'] = new Chart(document.getElementById('chart-rcbar'), {
-    type: 'bar',
-    data: { labels: services, datasets: [
-      { label:'受付', data:uVals, backgroundColor:C.blue },
-      { label:'完了', data:kVals, backgroundColor:C.teal }
+  chartInstances['rcbar'] = new Chart(document.getElementById('chart-rcbar'),{
+    type:'bar',
+    data:{ labels:services, datasets:[
+      {label:'受付',data:services.map(s=>sum(uketsuke.find(r=>r.service===s)||{})),backgroundColor:C.blue},
+      {label:'完了',data:services.map(s=>sum(kanryo.find(r=>r.service===s)||{})),backgroundColor:C.teal}
     ]},
-    options: { responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:true, labels:{font:{size:10}}} },
-      scales:{ x:{ticks:{font:{size:9},maxRotation:45}}, y:{ticks:{font:{size:9}}} } }
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,labels:{font:{size:10}}}},
+      scales:{x:{ticks:{font:{size:9},maxRotation:45}},y:{ticks:{font:{size:9}}}}}
   });
 
-  const catTotals = COLS.map(c => uketsuke.reduce((a,r)=>a+(r[c]||0),0));
-  chartInstances['donut'] = new Chart(document.getElementById('chart-donut'), {
-    type: 'doughnut',
-    data: { labels: COLS.map((c,i)=>`${c}(${catTotals[i]})`),
-      datasets: [{ data:catTotals,
+  const catTotals = COLS.map(c=>uketsuke.reduce((a,r)=>a+(r[c]||0),0));
+  chartInstances['donut'] = new Chart(document.getElementById('chart-donut'),{
+    type:'doughnut',
+    data:{ labels:COLS.map((c,i)=>`${c}(${catTotals[i]})`),
+      datasets:[{data:catTotals,
         backgroundColor:[C.red,C.amber,C.blue,C.teal,C.purple,C.coral,C.gray,'#333'],
-        borderWidth:1, borderColor:'#fff' }]},
-    options: { responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{position:'right', labels:{font:{size:9},boxWidth:10}} } }
+        borderWidth:1,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'right',labels:{font:{size:9},boxWidth:10}}}}
   });
 
   // ---- 残数テーブル ----
-  const totalsZ = COLS.map(c => zansu.reduce((a,r)=>a+(r[c]||0),0));
-  document.getElementById('table-zansu').innerHTML = `
-    <tr><th style="text-align:left;min-width:160px">サービス</th>
-    ${COLS.map(c=>`<th>${c}</th>`).join('')}<th>合計</th></tr>
-    ${zansu.map(r=>`<tr>
-      <td class="svc">${r.service}</td>
-      ${COLS.map(c=>{
-        const v=r[c]||0;
+  const totalsZ = COLS.map(c=>zansu.reduce((a,r)=>a+(r[c]||0),0));
+  document.getElementById('table-zansu').innerHTML=`
+    <tr><th style="text-align:left;min-width:160px">サービス</th>${COLS.map(c=>`<th>${c}</th>`).join('')}<th>合計</th></tr>
+    ${zansu.map(r=>`<tr><td class="svc">${r.service}</td>
+      ${COLS.map(c=>{const v=r[c]||0;
         const st=(c==='障害'&&v>0)?'style="color:#E24B4A;font-weight:bold"':
                  (c==='イベント'&&v>0)?'style="color:#BA7517;font-weight:bold"':'';
-        return `<td ${st}>${v||''}</td>`;
-      }).join('')}
+        return `<td ${st}>${v||''}</td>`;}).join('')}
       <td style="font-weight:bold">${sum(r)}</td></tr>`).join('')}
-    <tr class="total-row"><td class="svc">合計</td>
-    ${totalsZ.map(v=>`<td>${v||''}</td>`).join('')}
-    <td>${totalsZ.reduce((a,b)=>a+b,0)}</td></tr>`;
+    <tr class="total-row"><td class="svc">合計</td>${totalsZ.map(v=>`<td>${v||''}</td>`).join('')}<td>${totalsZ.reduce((a,b)=>a+b,0)}</td></tr>`;
 
   // ---- アクションテーブル ----
-  const actionRows = svcStats.filter(s=>s.uTotal>0||s.zFault>0).map(s=>{
-    let pri,cls,action;
-    if(s.zFault>=3){pri='要対応';cls='danger';action=`障害・イベント残数 ${s.zFault}件。内容確認と根本原因の特定を優先。`;}
-    else if(s.diff>2){pri='注視';cls='warn';action=`受付が完了を ${s.diff}件上回っている。来週の推移を確認。`;}
-    else{pri='順調';cls='ok';action=`受付 ${s.uTotal}件 / 完了 ${s.kTotal}件。現状維持で継続監視。`;}
-    return `<tr><td class="svc" style="min-width:160px">${s.svc}</td>
-      <td class="center"><span class="badge ${cls}">${pri}</span></td>
-      <td>${action}</td><td class="center">担当GR</td></tr>`;
-  });
-  document.getElementById('table-action').innerHTML = `
-    <tr><th style="text-align:left;min-width:160px">サービス</th>
-    <th style="min-width:60px">優先度</th><th>アクション</th><th style="min-width:70px">担当</th></tr>
-    ${actionRows.join('')}`;
+  document.getElementById('table-action').innerHTML=`
+    <tr><th style="text-align:left;min-width:160px">サービス</th><th style="min-width:60px">優先度</th><th>アクション</th><th style="min-width:70px">担当</th></tr>
+    ${svcStats.filter(s=>s.uTotal>0||s.zFault>0).map(s=>{
+      let pri,cls,action;
+      if(s.zFault>=3){pri='要対応';cls='danger';action=`障害・イベント残数 ${s.zFault}件。内容確認と根本原因の特定を優先。`;}
+      else if(s.diff>2){pri='注視';cls='warn';action=`受付が完了を ${s.diff}件上回っている。来週の推移を確認。`;}
+      else{pri='順調';cls='ok';action=`受付 ${s.uTotal}件 / 完了 ${s.kTotal}件。現状維持で継続監視。`;}
+      return `<tr><td class="svc" style="min-width:160px">${s.svc}</td>
+        <td class="center"><span class="badge ${cls}">${pri}</span></td>
+        <td>${action}</td><td class="center">担当GR</td></tr>`;
+    }).join('')}`;
 
-  document.getElementById('footer').textContent = `最終更新: ${new Date().toLocaleString('ja-JP')}　対象週: ${week}`;
-  document.getElementById('dashboard').scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('footer').textContent=`最終更新: ${new Date().toLocaleString('ja-JP')}　対象週: ${week}`;
+  document.getElementById('dashboard').scrollIntoView({behavior:'smooth'});
 }
 </script>
 </body>
