@@ -306,8 +306,8 @@ function applyData() {
     return dd>=fromDate && dd<=baseDate && isWeekday(dd);
   }
 
-  // 残数：Open（完了以外）の全件
-  const zansuRows = rawData.filter(r=>r.stat!=='完了');
+  // 残数：ステータスが完了・取下げ以外＝Open
+  const zansuRows = rawData.filter(r=>r.stat!=='完了'&&r.stat!=='取下げ');
   // 受付：集計期間内・営業日・受付日時
   const ukeRows   = rawData.filter(r=>inPeriod(r.rcv));
   // 完了：集計期間内・営業日・完了日時
@@ -446,7 +446,7 @@ function applyData() {
   document.getElementById('table-action').innerHTML=`
     <tr><th style="text-align:left;min-width:160px">サービス</th>
     <th style="min-width:60px">優先度</th><th>アクション</th><th>担当</th></tr>
-    ${svcStats.filter(s=>s.zansu>0||s.uke>0).map(s=>{
+    ${svcStats.filter(s=>s.zansu>0||s.uke>0||s.done>0).map(s=>{
       let pri,cls,action;
       if(s.fault>=3){pri='要対応';cls='danger';
         action=`障害・イベントOpen残 ${s.fault}件。内容確認と根本原因の特定を優先。`;}
