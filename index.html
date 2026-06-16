@@ -18,23 +18,26 @@
 
   #drop-zone {
     border:2px dashed #B0C4D8; border-radius:10px;
-    padding:32px 20px; text-align:center; cursor:pointer;
+    padding:28px 20px; text-align:center; cursor:pointer;
     transition:all 0.2s; background:#F7FAFD; margin-bottom:12px;
   }
   #drop-zone.dragover { border-color:#1E3A5F; background:#EEF3F9; }
   #drop-zone.loaded  { border-color:#1D9E75; background:#E8F8F2; }
-  #drop-zone .icon { font-size:36px; margin-bottom:8px; }
-  #drop-zone .label { font-size:14px; color:#4A6080; }
+  #drop-zone .icon { font-size:32px; margin-bottom:6px; }
+  #drop-zone .label { font-size:13px; color:#4A6080; }
   #drop-zone .label b { color:#1E3A5F; }
   #drop-zone .sub { font-size:11px; color:#888; margin-top:4px; }
   #drop-zone input[type=file] { display:none; }
 
-  .meta-inputs { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px; align-items:flex-end; }
+  .meta-inputs { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:10px; align-items:flex-end; }
   .meta-inputs .field label { font-size:11px; color:#4A6080; display:block; margin-bottom:3px; }
-  .meta-inputs .field input { font-size:12px; border:1px solid #B0C4D8; border-radius:4px; padding:5px 8px; width:140px; }
+  .meta-inputs .field input { font-size:12px; border:1px solid #B0C4D8; border-radius:4px; padding:5px 8px; }
   .meta-inputs .field .hint { font-size:10px; color:#888; margin-top:2px; }
+  .meta-inputs .field input[type=date]   { width:145px; }
+  .meta-inputs .field input[type=number] { width:80px; }
   #btn-apply { background:#1E3A5F; color:#fff; border:none; border-radius:6px; padding:9px 24px; font-size:13px; font-weight:bold; cursor:pointer; }
   #btn-apply:hover { background:#2C5282; }
+  #period-display { font-size:12px; color:#1E3A5F; background:#EEF3F9; border-radius:6px; padding:6px 12px; display:none; margin-bottom:8px; }
   #status-msg { font-size:12px; margin-top:8px; padding:6px 10px; border-radius:4px; display:none; }
   #status-msg.ok    { background:#E8F8F2; color:#0A4A30; }
   #status-msg.error { background:#FFF0F0; color:#7A1212; }
@@ -44,7 +47,7 @@
 
   .metrics { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:14px; }
   .metric { background:#fff; border-radius:8px; padding:10px 14px; border:0.5px solid #dde3ea; }
-  .metric-label { font-size:11px; color:#4A6080; margin-bottom:4px; }
+  .metric-label { font-size:11px; color:#4A6080; margin-bottom:4px; line-height:1.4; }
   .metric-val { font-size:26px; font-weight:bold; color:#1E3A5F; }
   .metric-val.down { color:#1D9E75; }
   .metric-val.up   { color:#E24B4A; }
@@ -105,16 +108,17 @@
   <div class="meta-inputs">
     <div class="field">
       <label>集計基準日</label>
-      <input type="date" id="meta-date">
-      <div class="hint">※未入力の場合は本日を使用</div>
+      <input type="date" id="meta-date" onchange="updatePeriodDisplay()">
+      <div class="hint">※未入力の場合は本日</div>
     </div>
     <div class="field">
-      <label>集計期間（日）</label>
-      <input type="number" id="meta-days" value="7" min="1" max="30">
-      <div class="hint">※受付・完了の集計日数</div>
+      <label>集計期間（営業日数）</label>
+      <input type="number" id="meta-days" value="7" min="1" max="60" onchange="updatePeriodDisplay()">
+      <div class="hint">※土日を除いた日数</div>
     </div>
-    <button id="btn-apply" onclick="applyData()" style="margin-bottom:2px">▶ 反映</button>
+    <button id="btn-apply" onclick="applyData()">▶ 反映</button>
   </div>
+  <div id="period-display"></div>
   <div id="status-msg"></div>
 </div>
 
@@ -124,24 +128,24 @@
     <div class="alerts"  id="alerts"></div>
     <div class="charts">
       <div class="chart-card">
-        <h3>残数（カテゴリ別）サービス別</h3>
+        <h3>残数（Open）サービス別・カテゴリ別</h3>
         <div style="position:relative;width:100%;height:220px"><canvas id="chart-zansu"></canvas></div>
       </div>
       <div class="chart-card">
-        <h3>受付 vs 完了（週間）</h3>
+        <h3>受付 vs 完了（集計期間内）</h3>
         <div style="position:relative;width:100%;height:220px"><canvas id="chart-rcbar"></canvas></div>
       </div>
       <div class="chart-card">
-        <h3>受付カテゴリ内訳</h3>
+        <h3>受付カテゴリ内訳（集計期間内）</h3>
         <div style="position:relative;width:100%;height:220px"><canvas id="chart-donut"></canvas></div>
       </div>
     </div>
     <div class="table-card">
-      <h3>サービス別 残数明細（カテゴリ別）</h3>
+      <h3>サービス別 残数明細（Open件数・カテゴリ別）</h3>
       <table id="table-zansu"></table>
     </div>
     <div class="table-card">
-      <h3>週間 受付・完了 明細</h3>
+      <h3 id="weekly-title">受付・完了 明細（集計期間内）</h3>
       <table id="table-weekly"></table>
     </div>
     <div class="table-card">
@@ -157,21 +161,58 @@ const C = {blue:'#378ADD',teal:'#1D9E75',red:'#E24B4A',amber:'#BA7517',coral:'#D
 let chartInstances = {};
 let rawData = null;
 
-// カテゴリ定義
 const CATS = ['障害','イベント','問い合わせ','定例運用','非定例運用','相談','クレーム','作業依頼'];
-const CAT_COLORS = [C.red,C.amber,C.blue,C.teal,C.purple,C.coral,C.gray,'#334'];
+const CAT_COLORS = [C.red,C.amber,C.blue,C.teal,C.purple,C.coral,C.gray,'#445'];
+
+// ===== 営業日計算 =====
+function isWeekday(d) { const w=d.getDay(); return w!==0&&w!==6; }
+
+// 基準日から過去N営業日前の日付を返す
+function calcFromDate(baseDate, bizDays) {
+  let d = new Date(baseDate);
+  d.setHours(0,0,0,0);
+  let count = 0;
+  while (count < bizDays) {
+    d.setDate(d.getDate()-1);
+    if (isWeekday(d)) count++;
+  }
+  d.setHours(0,0,0,0);
+  return d;
+}
+
+// 2日付間の営業日数を数える
+function countBizDays(from, to) {
+  let count=0, d=new Date(from);
+  d.setHours(0,0,0,0);
+  while (d<=to) { if(isWeekday(d)) count++; d.setDate(d.getDate()+1); }
+  return count;
+}
+
+function updatePeriodDisplay() {
+  const dateInput = document.getElementById('meta-date').value;
+  const days = parseInt(document.getElementById('meta-days').value)||7;
+  const baseDate = dateInput ? new Date(dateInput) : new Date();
+  baseDate.setHours(23,59,59,999);
+  const fromDate = calcFromDate(baseDate, days);
+  const el = document.getElementById('period-display');
+  el.style.display = 'block';
+  el.textContent = `集計期間：${fmtDate(fromDate)} 〜 ${fmtDate(baseDate)}（${days}営業日）`;
+}
+
+function fmtDate(d) {
+  return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+}
 
 // ===== ドロップゾーン =====
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
-
 dropZone.addEventListener('dragover', e=>{ e.preventDefault(); dropZone.classList.add('dragover'); });
 dropZone.addEventListener('dragleave', ()=>dropZone.classList.remove('dragover'));
 dropZone.addEventListener('drop', e=>{ e.preventDefault(); dropZone.classList.remove('dragover'); const f=e.dataTransfer.files[0]; if(f) loadFile(f); });
 fileInput.addEventListener('change', e=>{ if(e.target.files[0]) loadFile(e.target.files[0]); });
 
 function loadFile(file) {
-  showStatus('読み込み中...', 'ok');
+  showStatus('読み込み中...','ok');
   const reader = new FileReader();
   reader.onload = ev => {
     try {
@@ -179,185 +220,182 @@ function loadFile(file) {
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
 
-      // ヘッダー行を探す（インシデント番号が含まれる行）
+      // ヘッダー行を探す
       let headerIdx = -1;
-      for (let i=0; i<rows.length; i++) {
-        if (rows[i].some(c => String(c).includes('インシデント番号'))) { headerIdx=i; break; }
+      for (let i=0;i<rows.length;i++) {
+        if (rows[i].some(c=>String(c).includes('インシデント番号'))) { headerIdx=i; break; }
       }
-      if (headerIdx < 0) { showStatus('ヘッダー行が見つかりません。ファイル形式を確認してください。','error'); return; }
+      if (headerIdx<0) { showStatus('ヘッダー行が見つかりません。','error'); return; }
 
       const headers = rows[headerIdx].map(h=>String(h).trim());
-      const idxSvc  = headers.findIndex(h=>h.includes('サービス名'));
-      const idxCat  = headers.findIndex(h=>h.includes('インシデントカテゴリ'));
-      const idxStat = headers.findIndex(h=>h.includes('ステータス'));
-      const idxRcv  = headers.findIndex(h=>h.includes('受付日時'));
-      const idxDone = headers.findIndex(h=>h.includes('完了日時'));
-
-      if (idxSvc<0||idxCat<0||idxStat<0||idxRcv<0) {
-        showStatus('必要な列が見つかりません（サービス名/カテゴリ/ステータス/受付日時）','error'); return;
+      const idx = {
+        svc:  headers.findIndex(h=>h.includes('サービス名')),
+        cat:  headers.findIndex(h=>h.includes('インシデントカテゴリ')),
+        stat: headers.findIndex(h=>h.includes('ステータス')),
+        rcv:  headers.findIndex(h=>h.includes('受付日時')),
+        done: headers.findIndex(h=>h.includes('完了日時')),
+      };
+      if (idx.svc<0||idx.cat<0||idx.stat<0||idx.rcv<0) {
+        showStatus('必要な列が見つかりません。','error'); return;
       }
 
       rawData = rows.slice(headerIdx+1)
-        .filter(r => r[idxSvc])
-        .map(r => ({
-          svc:  String(r[idxSvc]).trim(),
-          cat:  normCat(String(r[idxCat]||'').trim()),
-          stat: String(r[idxStat]||'').trim(),
-          rcv:  parseDate(r[idxRcv]),
-          done: parseDate(r[idxDone]),
+        .filter(r=>r[idx.svc])
+        .map(r=>({
+          svc:  String(r[idx.svc]).trim(),
+          cat:  normCat(String(r[idx.cat]||'').trim()),
+          stat: String(r[idx.stat]||'').trim(),
+          rcv:  parseDate(r[idx.rcv]),
+          done: parseDate(r[idx.done]),
         }));
 
       dropZone.classList.add('loaded');
-      dropZone.querySelector('.label').innerHTML = `<b>${file.name}</b>`;
-      dropZone.querySelector('.sub').textContent = `${rawData.length}件 読み込み完了。「反映」を押してください。`;
-      showStatus(`${rawData.length}件のデータを読み込みました。「反映」を押してダッシュボードを更新してください。`,'ok');
-    } catch(e) {
-      showStatus('読み込みエラー: '+e.message,'error');
-    }
+      dropZone.querySelector('.label').innerHTML=`<b>${file.name}</b>`;
+      dropZone.querySelector('.sub').textContent=`${rawData.length}件 読み込み完了。「反映」を押してください。`;
+      showStatus(`${rawData.length}件を読み込みました。「反映」を押してください。`,'ok');
+    } catch(e) { showStatus('読み込みエラー: '+e.message,'error'); }
   };
   reader.readAsArrayBuffer(file);
 }
 
 function parseDate(v) {
   if (!v) return null;
-  if (v instanceof Date) return v;
+  if (v instanceof Date) return isNaN(v)?null:v;
   const s = String(v).trim();
   if (!s) return null;
-  // 2026/06/16 17:33 形式
   const m = s.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
-  if (m) return new Date(parseInt(m[1]), parseInt(m[2])-1, parseInt(m[3]));
+  if (m) return new Date(parseInt(m[1]),parseInt(m[2])-1,parseInt(m[3]));
   return null;
 }
 
 function normCat(c) {
-  // カテゴリ名を正規化
-  if (/障害/.test(c)) return '障害';
-  if (/イベント/.test(c)) return 'イベント';
+  if (/障害/.test(c))        return '障害';
+  if (/イベント/.test(c))    return 'イベント';
   if (/問い合わせ|問合/.test(c)) return '問い合わせ';
-  if (/定例運用/.test(c)) return '定例運用';
-  if (/非定例/.test(c)) return '非定例運用';
-  if (/相談/.test(c)) return '相談';
-  if (/クレーム/.test(c)) return 'クレーム';
-  if (/作業依頼/.test(c)) return '作業依頼';
-  return c || 'その他';
+  if (/定例運用/.test(c))    return '定例運用';
+  if (/非定例/.test(c))      return '非定例運用';
+  if (/相談/.test(c))        return '相談';
+  if (/クレーム/.test(c))    return 'クレーム';
+  if (/作業依頼/.test(c))    return '作業依頼';
+  return c||'その他';
 }
 
-function showStatus(msg, cls) {
-  const el = document.getElementById('status-msg');
-  el.textContent = msg;
-  el.className = cls;
-  el.style.display = 'block';
+function showStatus(msg,cls) {
+  const el=document.getElementById('status-msg');
+  el.textContent=msg; el.className=cls; el.style.display='block';
 }
-
 function destroyChart(id) { if(chartInstances[id]){chartInstances[id].destroy();delete chartInstances[id];} }
 
 // ===== 反映 =====
 function applyData() {
   if (!rawData) { showStatus('先にXLSXファイルをドロップしてください。','error'); return; }
 
-  // 基準日・期間
   const dateInput = document.getElementById('meta-date').value;
-  const days = parseInt(document.getElementById('meta-days').value) || 7;
-  const baseDate = dateInput ? new Date(dateInput) : new Date();
+  const bizDays   = parseInt(document.getElementById('meta-days').value)||7;
+  const baseDate  = dateInput ? new Date(dateInput) : new Date();
   baseDate.setHours(23,59,59,999);
-  const fromDate = new Date(baseDate);
-  fromDate.setDate(fromDate.getDate() - days + 1);
-  fromDate.setHours(0,0,0,0);
+  const fromDate  = calcFromDate(baseDate, bizDays);
 
-  const dateStr = baseDate.toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'});
-  const fromStr = fromDate.toLocaleDateString('ja-JP',{month:'2-digit',day:'2-digit'});
+  const fromStr = fmtDate(fromDate);
+  const toStr   = fmtDate(baseDate);
 
-  // サービス一覧（登場順）
+  // 期間内判定（土日除く）
+  function inPeriod(d) {
+    if (!d) return false;
+    const dd = new Date(d); dd.setHours(12,0,0,0);
+    return dd>=fromDate && dd<=baseDate && isWeekday(dd);
+  }
+
+  // 残数：Open（完了以外）の全件
+  const zansuRows = rawData.filter(r=>r.stat!=='完了');
+  // 受付：集計期間内・営業日・受付日時
+  const ukeRows   = rawData.filter(r=>inPeriod(r.rcv));
+  // 完了：集計期間内・営業日・完了日時
+  const doneRows  = rawData.filter(r=>inPeriod(r.done));
+
   const svcSet = [...new Set(rawData.map(r=>r.svc))].sort();
 
-  // 集計
-  function inRange(d) { return d && d >= fromDate && d <= baseDate; }
-
-  // 残数：ステータスが「完了」以外
-  const zansuRows = rawData.filter(r => r.stat !== '完了');
-  // 受付：受付日時が期間内
-  const ukeRows   = rawData.filter(r => inRange(r.rcv));
-  // 完了：完了日時が期間内
-  const doneRows  = rawData.filter(r => inRange(r.done));
-
-  // サービス別・カテゴリ別集計
   function tally(rows) {
-    const m = {};
-    svcSet.forEach(s => { m[s] = {}; CATS.forEach(c=>m[s][c]=0); });
-    rows.forEach(r => {
-      if (!m[r.svc]) { m[r.svc]={}; CATS.forEach(c=>m[r.svc][c]=0); }
-      const cat = CATS.includes(r.cat) ? r.cat : 'その他';
-      if (m[r.svc][cat] !== undefined) m[r.svc][cat]++;
+    const m={};
+    svcSet.forEach(s=>{m[s]={};CATS.forEach(c=>m[s][c]=0);});
+    rows.forEach(r=>{
+      if(!m[r.svc]){m[r.svc]={};CATS.forEach(c=>m[r.svc][c]=0);}
+      const cat=CATS.includes(r.cat)?r.cat:'その他';
+      if(m[r.svc][cat]!==undefined) m[r.svc][cat]++;
     });
     return m;
   }
-  function sumRow(o) { return Object.values(o).reduce((a,b)=>a+b,0); }
+  function sumRow(o){return Object.values(o).reduce((a,b)=>a+b,0);}
 
-  const zansuMap = tally(zansuRows);
-  const ukeMap   = tally(ukeRows);
-  const doneMap  = tally(doneRows);
+  const zansuMap=tally(zansuRows);
+  const ukeMap  =tally(ukeRows);
+  const doneMap =tally(doneRows);
 
-  const totalZansu = zansuRows.length;
-  const totalUke   = ukeRows.length;
-  const totalDone  = doneRows.length;
-  const diff = totalUke - totalDone;
+  const totalZansu=zansuRows.length;
+  const totalUke  =ukeRows.length;
+  const totalDone =doneRows.length;
+  const diff=totalUke-totalDone;
 
-  // ヘッダー更新
-  document.getElementById('header-meta').textContent =
-    `基準日：${dateStr}　集計期間：${fromStr}〜${dateStr}（${days}日間）`;
-  document.getElementById('dashboard').style.display = 'block';
+  document.getElementById('header-meta').textContent=
+    `基準日：${toStr}　集計期間：${fromStr}〜${toStr}（${bizDays}営業日）`;
+  document.getElementById('weekly-title').textContent=
+    `受付・完了 明細（${fromStr}〜${toStr}・${bizDays}営業日）`;
+  document.getElementById('dashboard').style.display='block';
 
   // ---- メトリクス ----
-  document.getElementById('metrics').innerHTML = [
-    { label:'残数（未完了）', val:totalZansu+'件', cls:'' },
-    { label:`受付（直近${days}日）`, val:totalUke+'件', cls:'' },
-    { label:`完了（直近${days}日）`, val:totalDone+'件', cls:'' },
-    { label:'週間差分（受付−完了）', val:(diff>=0?'+':'')+diff+'件',
-      cls:diff>0?'up':'down', sub:diff>0?'積み残し増':'消化超過' },
-    { label:'全インシデント（累積）', val:rawData.length+'件', cls:'' },
+  document.getElementById('metrics').innerHTML=[
+    {label:'残数（Open件数）',          val:totalZansu+'件', cls:''},
+    {label:`受付（${bizDays}営業日）`,  val:totalUke+'件',   cls:''},
+    {label:`完了（${bizDays}営業日）`,  val:totalDone+'件',  cls:''},
+    {label:'週間差分（受付−完了）',
+      val:(diff>=0?'+':'')+diff+'件',
+      cls:diff>0?'up':'down',
+      sub:diff>0?'積み残し増':'消化超過'},
+    {label:'全インシデント（累積）',     val:rawData.length+'件', cls:''},
   ].map(m=>`<div class="metric">
     <div class="metric-label">${m.label}</div>
     <div class="metric-val ${m.cls||''}">${m.val}</div>
     ${m.sub?`<div class="metric-sub">${m.sub}</div>`:''}
   </div>`).join('');
 
-  // ---- アラート自動生成 ----
-  const svcStats = svcSet.map(svc=>({
+  // ---- アラート ----
+  const svcStats=svcSet.map(svc=>({
     svc,
-    zansu: sumRow(zansuMap[svc]||{}),
-    uke:   sumRow(ukeMap[svc]||{}),
-    done:  sumRow(doneMap[svc]||{}),
-    fault: (zansuMap[svc]?.['障害']||0)+(zansuMap[svc]?.['イベント']||0),
+    zansu:sumRow(zansuMap[svc]||{}),
+    uke:  sumRow(ukeMap[svc]||{}),
+    done: sumRow(doneMap[svc]||{}),
+    fault:(zansuMap[svc]?.['障害']||0)+(zansuMap[svc]?.['イベント']||0),
   })).sort((a,b)=>(b.fault+b.zansu)-(a.fault+a.zansu));
 
   const alertItems=[];
   svcStats.forEach(s=>{
-    if(s.fault>=3) alertItems.push({cls:'danger',title:`[要対応] ${s.svc}`,body:`障害・イベント残数 ${s.fault}件。未完了計 ${s.zansu}件。受付 ${s.uke}件 / 完了 ${s.done}件。`});
+    if(s.fault>=3) alertItems.push({cls:'danger',title:`[要対応] ${s.svc}`,body:`障害・イベント残数 ${s.fault}件。Open合計 ${s.zansu}件。受付 ${s.uke}件 / 完了 ${s.done}件。`});
     else if(s.uke>s.done&&s.uke>=3) alertItems.push({cls:'warn',title:`[注視] ${s.svc}`,body:`受付 ${s.uke}件 > 完了 ${s.done}件（差分 +${s.uke-s.done}件）。`});
     else if(s.done>s.uke&&s.done>=3) alertItems.push({cls:'ok',title:`[順調] ${s.svc}`,body:`受付 ${s.uke}件 < 完了 ${s.done}件。積み残し解消が進んでいます。`});
   });
-  if(alertItems.length===0) alertItems.push({cls:'ok',title:'今週は要対応サービスなし',body:'全サービス正常範囲内です。'});
-  if(alertItems.length%2!==0) alertItems.push({cls:'ok',title:'全体サマリー',body:`受付合計 ${totalUke}件 / 完了合計 ${totalDone}件。差分 ${diff>=0?'+':''}${diff}件。`});
-  document.getElementById('alerts').innerHTML = alertItems.slice(0,4).map(a=>
+  if(alertItems.length===0) alertItems.push({cls:'ok',title:'今期間は要対応サービスなし',body:'全サービス正常範囲内です。'});
+  if(alertItems.length%2!==0) alertItems.push({cls:'ok',title:'全体サマリー',body:`受付 ${totalUke}件 / 完了 ${totalDone}件。差分 ${diff>=0?'+':''}${diff}件。`});
+  document.getElementById('alerts').innerHTML=alertItems.slice(0,4).map(a=>
     `<div class="alert ${a.cls}"><div class="alert-title">${a.title}</div><div class="alert-body">${a.body}</div></div>`).join('');
 
   // ---- グラフ ----
   ['zansu','rcbar','donut'].forEach(destroyChart);
 
-  // 残数（障害・イベントを強調）
   chartInstances['zansu']=new Chart(document.getElementById('chart-zansu'),{type:'bar',
     data:{labels:svcSet,datasets:[
-      {label:'障害',  data:svcSet.map(s=>zansuMap[s]?.['障害']||0),  backgroundColor:C.red},
+      {label:'障害',   data:svcSet.map(s=>zansuMap[s]?.['障害']||0),   backgroundColor:C.red},
       {label:'イベント',data:svcSet.map(s=>zansuMap[s]?.['イベント']||0),backgroundColor:C.amber},
-      {label:'その他',data:svcSet.map(s=>{const z=zansuMap[s]||{};return sumRow(z)-(z['障害']||0)-(z['イベント']||0);}),backgroundColor:C.blue},
+      {label:'その他', data:svcSet.map(s=>{const z=zansuMap[s]||{};
+        return sumRow(z)-(z['障害']||0)-(z['イベント']||0);}),         backgroundColor:C.blue},
     ]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:true,labels:{font:{size:9}}}},
-      scales:{x:{stacked:true,ticks:{font:{size:9},maxRotation:45}},y:{stacked:true,ticks:{font:{size:9}}}}}});
+      scales:{x:{stacked:true,ticks:{font:{size:9},maxRotation:45}},
+              y:{stacked:true,ticks:{font:{size:9}}}}}});
 
   chartInstances['rcbar']=new Chart(document.getElementById('chart-rcbar'),{type:'bar',
     data:{labels:svcSet,datasets:[
-      {label:'受付',data:svcSet.map(s=>sumRow(ukeMap[s]||{})),backgroundColor:C.blue},
+      {label:'受付',data:svcSet.map(s=>sumRow(ukeMap[s]||{})), backgroundColor:C.blue},
       {label:'完了',data:svcSet.map(s=>sumRow(doneMap[s]||{})),backgroundColor:C.teal},
     ]},
     options:{responsive:true,maintainAspectRatio:false,
@@ -372,60 +410,63 @@ function applyData() {
       plugins:{legend:{position:'right',labels:{font:{size:9},boxWidth:10}}}}});
 
   // ---- 残数テーブル ----
-  const totZ={}; CATS.forEach(c=>totZ[c]=0);
+  const totZ={};CATS.forEach(c=>totZ[c]=0);
   svcSet.forEach(s=>CATS.forEach(c=>totZ[c]+=(zansuMap[s]?.[c]||0)));
   document.getElementById('table-zansu').innerHTML=`
-    <tr><th style="text-align:left">サービス</th>${CATS.map(c=>`<th>${c}</th>`).join('')}<th>合計</th></tr>
-    ${svcSet.map(s=>{
-      const z=zansuMap[s]||{};
-      return `<tr><td class="svc">${s}</td>
-        ${CATS.map(c=>{const v=z[c]||0;
-          const cl=(c==='障害'&&v>0)||(c==='イベント'&&v>0)?'class="num-hi"':'';
-          return `<td ${cl}>${v||''}</td>`;}).join('')}
-        <td style="font-weight:bold">${sumRow(z)}</td></tr>`;
-    }).join('')}
-    <tr class="total-row"><td class="svc">合計</td>${CATS.map(c=>`<td>${totZ[c]||''}</td>`).join('')}<td>${Object.values(totZ).reduce((a,b)=>a+b,0)}</td></tr>`;
+    <tr><th style="text-align:left">サービス</th>${CATS.map(c=>`<th>${c}</th>`).join('')}<th>Open合計</th></tr>
+    ${svcSet.map(s=>{const z=zansuMap[s]||{};return `<tr><td class="svc">${s}</td>
+      ${CATS.map(c=>{const v=z[c]||0;
+        const cl=(c==='障害'&&v>0)||(c==='イベント'&&v>0)?'class="num-hi"':'';
+        return `<td ${cl}>${v||''}</td>`;}).join('')}
+      <td style="font-weight:bold">${sumRow(z)}</td></tr>`;}).join('')}
+    <tr class="total-row"><td class="svc">合計</td>${CATS.map(c=>`<td>${totZ[c]||''}</td>`).join('')}
+    <td>${Object.values(totZ).reduce((a,b)=>a+b,0)}</td></tr>`;
 
-  // ---- 週間受付・完了テーブル ----
-  const totU={}; const totD={}; CATS.forEach(c=>{totU[c]=0;totD[c]=0;});
+  // ---- 受付・完了テーブル ----
+  const totU={},totD={};CATS.forEach(c=>{totU[c]=0;totD[c]=0;});
   svcSet.forEach(s=>{CATS.forEach(c=>{totU[c]+=(ukeMap[s]?.[c]||0);totD[c]+=(doneMap[s]?.[c]||0);});});
   document.getElementById('table-weekly').innerHTML=`
     <tr><th style="text-align:left">サービス</th>
       ${CATS.map(c=>`<th colspan="2" style="background:#2C5282">${c}</th>`).join('')}
       <th colspan="2" style="background:#1A2A3A">合計</th></tr>
-    <tr><th style="text-align:left">　</th>
-      ${CATS.map(()=>'<th style="background:#3A6A9A;font-size:9px">受付</th><th style="background:#1D6A50;font-size:9px">完了</th>').join('')}
+    <tr><th></th>${CATS.map(()=>
+      '<th style="background:#3A6A9A;font-size:9px">受付</th><th style="background:#1D6A50;font-size:9px">完了</th>').join('')}
       <th style="background:#2A3A4A;font-size:9px">受付</th><th style="background:#0A4A30;font-size:9px">完了</th></tr>
-    ${svcSet.map(s=>{
-      const u=ukeMap[s]||{},d=doneMap[s]||{};
+    ${svcSet.map(s=>{const u=ukeMap[s]||{},d=doneMap[s]||{};
       return `<tr><td class="svc">${s}</td>
         ${CATS.map(c=>`<td>${u[c]||''}</td><td>${d[c]||''}</td>`).join('')}
-        <td style="font-weight:bold">${sumRow(u)}</td><td style="font-weight:bold">${sumRow(d)}</td></tr>`;
-    }).join('')}
+        <td style="font-weight:bold">${sumRow(u)}</td>
+        <td style="font-weight:bold">${sumRow(d)}</td></tr>`;}).join('')}
     <tr class="total-row"><td class="svc">合計</td>
       ${CATS.map(c=>`<td>${totU[c]||''}</td><td>${totD[c]||''}</td>`).join('')}
-      <td>${Object.values(totU).reduce((a,b)=>a+b,0)}</td><td>${Object.values(totD).reduce((a,b)=>a+b,0)}</td></tr>`;
+      <td>${Object.values(totU).reduce((a,b)=>a+b,0)}</td>
+      <td>${Object.values(totD).reduce((a,b)=>a+b,0)}</td></tr>`;
 
   // ---- アクションテーブル ----
   document.getElementById('table-action').innerHTML=`
-    <tr><th style="text-align:left;min-width:160px">サービス</th><th style="min-width:60px">優先度</th><th>アクション</th><th>担当</th></tr>
+    <tr><th style="text-align:left;min-width:160px">サービス</th>
+    <th style="min-width:60px">優先度</th><th>アクション</th><th>担当</th></tr>
     ${svcStats.filter(s=>s.zansu>0||s.uke>0).map(s=>{
       let pri,cls,action;
-      if(s.fault>=3){pri='要対応';cls='danger';action=`障害・イベント残数 ${s.fault}件。内容確認と根本原因の特定を優先。`;}
-      else if(s.uke>s.done+2){pri='注視';cls='warn';action=`受付 ${s.uke}件 > 完了 ${s.done}件（+${s.uke-s.done}件）。来週の推移を確認。`;}
-      else{pri='順調';cls='ok';action=`受付 ${s.uke}件 / 完了 ${s.done}件。現状維持で継続監視。`;}
+      if(s.fault>=3){pri='要対応';cls='danger';
+        action=`障害・イベントOpen残 ${s.fault}件。内容確認と根本原因の特定を優先。`;}
+      else if(s.uke>s.done+2){pri='注視';cls='warn';
+        action=`受付 ${s.uke}件 > 完了 ${s.done}件（+${s.uke-s.done}件）。来週の推移を確認。`;}
+      else{pri='順調';cls='ok';
+        action=`Open ${s.zansu}件。受付 ${s.uke}件 / 完了 ${s.done}件。現状維持で継続監視。`;}
       return `<tr><td class="svc">${s.svc}</td>
         <td style="text-align:center"><span class="badge ${cls}">${pri}</span></td>
         <td>${action}</td><td style="text-align:center">担当GR</td></tr>`;
     }).join('')}`;
 
-  showStatus(`集計完了：残数 ${totalZansu}件 / 受付(${days}日) ${totalUke}件 / 完了(${days}日) ${totalDone}件`,'ok');
-  document.getElementById('footer').textContent=`最終更新: ${new Date().toLocaleString('ja-JP')}　基準日: ${dateStr}`;
+  showStatus(`集計完了：Open残数 ${totalZansu}件 / 受付(${bizDays}営業日) ${totalUke}件 / 完了(${bizDays}営業日) ${totalDone}件`,'ok');
+  document.getElementById('footer').textContent=`最終更新: ${new Date().toLocaleString('ja-JP')}　集計期間: ${fromStr}〜${toStr}（${bizDays}営業日）`;
   document.getElementById('dashboard').scrollIntoView({behavior:'smooth'});
 }
 
-// 今日の日付をデフォルト設定
+// 初期設定
 document.getElementById('meta-date').value = new Date().toISOString().split('T')[0];
+updatePeriodDisplay();
 </script>
 </body>
 </html>
