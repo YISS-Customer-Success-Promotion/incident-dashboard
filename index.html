@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CS推進部 インシデントダッシュボード</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Meiryo', 'Yu Gothic', sans-serif; background: #F0F4F8; color: #1A2A3A; font-size: 13px; }
+
+  header { background: #1E3A5F; color: #fff; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 16px; font-weight: bold; }
+  header .meta { font-size: 12px; color: #CADCFC; text-align: right; line-height: 1.6; }
+
+  .container { max-width: 1280px; margin: 0 auto; padding: 14px 16px; }
+
+  /* メトリクス */
+  .metrics { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 14px; }
+  .metric { background: #fff; border-radius: 8px; padding: 10px 14px; border: 0.5px solid #dde3ea; }
+  .metric-label { font-size: 11px; color: #4A6080; margin-bottom: 4px; }
+  .metric-val { font-size: 26px; font-weight: bold; color: #1E3A5F; }
+  .metric-val.down { color: #1D9E75; }
+  .metric-val.up   { color: #E24B4A; }
+  .metric-sub { font-size: 10px; color: #4A6080; margin-top: 2px; }
+
+  /* アラート */
+  .alerts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .alert { border-radius: 8px; padding: 10px 14px; border: 1px solid; }
+  .alert-title { font-size: 12px; font-weight: bold; margin-bottom: 4px; }
+  .alert-body  { font-size: 11px; line-height: 1.5; }
+  .alert.danger { background: #FFF0F0; border-color: #E24B4A; }
+  .alert.danger .alert-title { color: #7A1212; }
+  .alert.danger .alert-body  { color: #9B3030; }
+  .alert.warn   { background: #FFF5E6; border-color: #BA7517; }
+  .alert.warn .alert-title { color: #5C3000; }
+  .alert.warn .alert-body  { color: #7A4A00; }
+  .alert.ok     { background: #E8F8F2; border-color: #1D9E75; }
+  .alert.ok .alert-title { color: #0A4A30; }
+  .alert.ok .alert-body  { color: #145C3A; }
+
+  /* グラフ行 */
+  .charts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+  .chart-card { background: #fff; border-radius: 8px; padding: 12px; border: 0.5px solid #dde3ea; }
+  .chart-card h3 { font-size: 12px; font-weight: bold; color: #1E3A5F; margin-bottom: 8px; }
+  .chart-wrap { position: relative; width: 100%; }
+
+  /* テーブル */
+  .table-card { background: #fff; border-radius: 8px; padding: 12px; border: 0.5px solid #dde3ea; margin-bottom: 14px; overflow-x: auto; }
+  .table-card h3 { font-size: 12px; font-weight: bold; color: #1E3A5F; margin-bottom: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { background: #1E3A5F; color: #fff; padding: 6px 8px; text-align: center; font-size: 10px; white-space: nowrap; }
+  td { padding: 5px 8px; border-bottom: 0.5px solid #E0E8F0; text-align: center; white-space: nowrap; }
+  td.svc { text-align: left; font-weight: bold; }
+  tr:nth-child(even) { background: #F5F8FC; }
+  tr.total-row { background: #EEF3F9 !important; font-weight: bold; }
+  .badge { display: inline-block; font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 99px; }
+  .badge.danger { background: #FCEBEB; color: #A32D2D; border: 1px solid #E24B4A; }
+  .badge.warn   { background: #FAEEDA; color: #7A4A00; border: 1px solid #BA7517; }
+  .badge.ok     { background: #E1F5EE; color: #0F6E56; border: 1px solid #1D9E75; }
+
+  /* アクション */
+  .action-table td { text-align: left; }
+  .action-table td.center { text-align: center; }
+
+  footer { text-align: center; font-size: 10px; color: #888; padding: 16px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="header-title">CS推進部 インシデントダッシュボード</h1>
+  <div class="meta" id="header-meta">読み込み中...</div>
+</header>
+
+<div class="container">
+  <div class="metrics" id="metrics"></div>
+  <div class="alerts"  id="alerts"></div>
+  <div class="charts">
+    <div class="chart-card">
+      <h3>残数（障害・イベント除く）サービス別</h3>
+      <div class="chart-wrap" style="height:220px"><canvas id="chart-zansu"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>受付 vs 完了（週間）</h3>
+      <div class="chart-wrap" style="height:220px"><canvas id="chart-rcbar"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>受付カテゴリ内訳</h3>
+      <div class="chart-wrap" style="height:220px"><canvas id="chart-donut"></canvas></div>
+    </div>
+  </div>
+  <div class="table-card">
+    <h3>サービス別 残数明細</h3>
+    <table id="table-zansu"></table>
+  </div>
+  <div class="table-card">
+    <h3>ネクストアクション</h3>
+    <table class="action-table" id="table-action"></table>
+  </div>
+</div>
+
+<footer id="footer">データ: data.csv</footer>
+
+<script>
+// =====================
+// CSV パース
+// =====================
+async function loadCSV() {
+  const res = await fetch('data.csv?v=' + Date.now());
+  const text = await res.text();
+  const lines = text.trim().split('\n').map(l => l.split(','));
+  const headers = lines[0];
+  return lines.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => obj[h.trim()] = (row[i] || '').trim());
+    return obj;
+  });
+}
+
+// =====================
+// メイン処理
+// =====================
+const COLS = ['障害','イベント','問い合わせ','定例運用','非定例運用','相談','クレーム','作業依頼'];
+const C = { blue:'#378ADD', teal:'#1D9E75', red:'#E24B4A', amber:'#BA7517', coral:'#D85A30', purple:'#7F77DD', gray:'#888780' };
+
+function sum(row) { return COLS.reduce((a, c) => a + (parseInt(row[c]) || 0), 0); }
+function sumExcl(row) { return ['問い合わせ','定例運用','非定例運用','相談','クレーム','作業依頼'].reduce((a,c)=>a+(parseInt(row[c])||0),0); }
+
+async function main() {
+  const rows = await loadCSV();
+
+  // metaデータ取得
+  const meta = {};
+  rows.filter(r => r.type === 'meta').forEach(r => meta[r.service] = r.障害);
+
+  const week   = meta['week']          || '';
+  const snapDate = meta['snapshot_date'] || '';
+  const totalExcl = parseInt(meta['total_excl']) || 0;
+
+  document.getElementById('header-title').textContent = 'CS推進部 インシデントダッシュボード';
+  document.getElementById('header-meta').innerHTML = `対象週：${week}　　スナップショット：${snapDate}`;
+
+  const zansu = rows.filter(r => r.type === '残数');
+  const uketsuke = rows.filter(r => r.type === '受付');
+  const kanryo   = rows.filter(r => r.type === '完了');
+
+  // サービス一覧
+  const services = zansu.map(r => r.service);
+
+  // 集計
+  const totalUketsuke = uketsuke.reduce((a, r) => a + sum(r), 0);
+  const totalKanryo   = kanryo.reduce((a, r) => a + sum(r), 0);
+  const totalZansu    = zansu.reduce((a, r) => a + sum(r), 0);
+  const totalZansuExcl = zansu.reduce((a, r) => a + sumExcl(r), 0);
+  const diff = totalUketsuke - totalKanryo;
+
+  // ---- メトリクス ----
+  const metricsData = [
+    { label: `残数（${snapDate}・障害/イベント除く）`, val: totalExcl || totalZansuExcl, cls: '', sub: '' },
+    { label: '残数合計（全カテゴリ）',  val: totalZansu, cls: '', sub: '' },
+    { label: '受付（週間）',            val: totalUketsuke, cls: '', sub: `${week}` },
+    { label: '完了（週間）',            val: totalKanryo,   cls: '', sub: `${week}` },
+    { label: '週間差分（受付-完了）',   val: (diff >= 0 ? '+' : '') + diff, cls: diff > 0 ? 'up' : 'down', sub: diff > 0 ? '積み残し増' : '消化超過' },
+  ];
+  document.getElementById('metrics').innerHTML = metricsData.map(m =>
+    `<div class="metric">
+      <div class="metric-label">${m.label}</div>
+      <div class="metric-val ${m.cls}">${m.val}件</div>
+      ${m.sub ? `<div class="metric-sub">${m.sub}</div>` : ''}
+    </div>`
+  ).join('');
+
+  // ---- アラート自動生成 ----
+  // 受付件数の多い順・障害+イベントが多い順でアラート判定
+  const svcStats = services.map(svc => {
+    const z = zansu.find(r => r.service === svc) || {};
+    const u = uketsuke.find(r => r.service === svc) || {};
+    const k = kanryo.find(r => r.service === svc) || {};
+    const uTotal = sum(u);
+    const kTotal = sum(k);
+    const zFault = (parseInt(z['障害'])||0) + (parseInt(z['イベント'])||0);
+    return { svc, uTotal, kTotal, zFault, diff: uTotal - kTotal };
+  }).sort((a,b) => (b.zFault + b.uTotal) - (a.zFault + a.uTotal));
+
+  const alertsEl = document.getElementById('alerts');
+  const alertItems = [];
+  svcStats.slice(0, 4).forEach(s => {
+    if (s.zFault >= 5) {
+      alertItems.push({ cls: 'danger', title: `[要対応] ${s.svc}`, body: `障害・イベント残数 ${s.zFault}件。週間受付 ${s.uTotal}件 / 完了 ${s.kTotal}件。` });
+    } else if (s.uTotal > s.kTotal && s.uTotal >= 3) {
+      alertItems.push({ cls: 'warn', title: `[注視] ${s.svc}`, body: `受付 ${s.uTotal}件 > 完了 ${s.kTotal}件（差分 +${s.diff}件）。` });
+    } else if (s.kTotal > s.uTotal && s.kTotal >= 5) {
+      alertItems.push({ cls: 'ok', title: `[順調] ${s.svc}`, body: `受付 ${s.uTotal}件 < 完了 ${s.kTotal}件。積み残し解消が進んでいます。` });
+    }
+  });
+  if (alertItems.length === 0) alertItems.push({ cls: 'ok', title: '今週は要対応サービスなし', body: '全サービス正常範囲内です。' });
+  // 偶数にする
+  if (alertItems.length % 2 !== 0) alertItems.push({ cls: 'ok', title: '全体', body: `受付合計 ${totalUketsuke}件 / 完了合計 ${totalKanryo}件。差分 ${diff > 0 ? '+' : ''}${diff}件。` });
+  alertsEl.innerHTML = alertItems.map(a =>
+    `<div class="alert ${a.cls}"><div class="alert-title">${a.title}</div><div class="alert-body">${a.body}</div></div>`
+  ).join('');
+
+  // ---- グラフ1: 残数（障害/イベント除く） ----
+  const zansuExclVals = services.map(svc => {
+    const z = zansu.find(r => r.service === svc) || {};
+    return sumExcl(z);
+  });
+  new Chart(document.getElementById('chart-zansu'), {
+    type: 'bar',
+    data: { labels: services.map(s => s.replace('(', '\n(').replace('（', '\n（')),
+      datasets: [{ label: '残数', data: zansuExclVals, backgroundColor: C.blue }] },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { ticks: { font: { size: 9 }, maxRotation: 45 } }, y: { ticks: { font: { size: 9 } } } }
+    }
+  });
+
+  // ---- グラフ2: 受付 vs 完了 ----
+  const uVals = services.map(svc => sum(uketsuke.find(r => r.service === svc) || {}));
+  const kVals = services.map(svc => sum(kanryo.find(r => r.service === svc) || {}));
+  new Chart(document.getElementById('chart-rcbar'), {
+    type: 'bar',
+    data: { labels: services.map(s => s.replace('(', '\n(').replace('（', '\n（')),
+      datasets: [
+        { label: '受付', data: uVals, backgroundColor: C.blue },
+        { label: '完了', data: kVals, backgroundColor: C.teal }
+      ]},
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: true, labels: { font: { size: 10 } } } },
+      scales: { x: { ticks: { font: { size: 9 }, maxRotation: 45 } }, y: { ticks: { font: { size: 9 } } } }
+    }
+  });
+
+  // ---- グラフ3: 受付カテゴリ内訳 ----
+  const catTotals = COLS.map(c => uketsuke.reduce((a, r) => a + (parseInt(r[c]) || 0), 0));
+  const catLabels = COLS.map((c, i) => `${c}(${catTotals[i]})`);
+  new Chart(document.getElementById('chart-donut'), {
+    type: 'doughnut',
+    data: { labels: catLabels,
+      datasets: [{ data: catTotals,
+        backgroundColor: [C.red, C.amber, C.blue, C.teal, C.purple, C.coral, C.gray, '#333'],
+        borderWidth: 1, borderColor: '#fff' }]},
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'right', labels: { font: { size: 9 }, boxWidth: 10 } } }
+    }
+  });
+
+  // ---- テーブル: 残数明細 ----
+  const tableZ = document.getElementById('table-zansu');
+  const totalsZ = COLS.map(c => zansu.reduce((a, r) => a + (parseInt(r[c])||0), 0));
+  tableZ.innerHTML = `
+    <tr>
+      <th style="text-align:left;min-width:160px">サービス</th>
+      ${COLS.map(c => `<th>${c}</th>`).join('')}
+      <th>合計</th>
+    </tr>
+    ${zansu.map(r => `
+      <tr>
+        <td class="svc">${r.service}</td>
+        ${COLS.map(c => {
+          const v = parseInt(r[c]) || 0;
+          const cl = (c === '障害' && v > 0) ? 'style="color:#E24B4A;font-weight:bold"' :
+                     (c === 'イベント' && v > 0) ? 'style="color:#BA7517;font-weight:bold"' : '';
+          return `<td ${cl}>${v || ''}</td>`;
+        }).join('')}
+        <td style="font-weight:bold">${sum(r)}</td>
+      </tr>`).join('')}
+    <tr class="total-row">
+      <td class="svc">合計</td>
+      ${totalsZ.map(v => `<td>${v || ''}</td>`).join('')}
+      <td>${totalsZ.reduce((a,b)=>a+b,0)}</td>
+    </tr>`;
+
+  // ---- テーブル: ネクストアクション ----
+  const tableA = document.getElementById('table-action');
+  const actionRows = svcStats.filter(s => s.uTotal > 0 || s.zFault > 0).map(s => {
+    let pri, cls, action;
+    if (s.zFault >= 5) {
+      pri = '要対応'; cls = 'danger';
+      action = `障害・イベント残数 ${s.zFault}件。内容確認と根本原因の特定を優先。`;
+    } else if (s.diff > 2) {
+      pri = '注視'; cls = 'warn';
+      action = `受付が完了を ${s.diff}件上回っている。来週の推移を確認。`;
+    } else {
+      pri = '順調'; cls = 'ok';
+      action = `受付 ${s.uTotal}件 / 完了 ${s.kTotal}件。現状維持で継続監視。`;
+    }
+    return `<tr>
+      <td class="svc" style="min-width:160px">${s.svc}</td>
+      <td class="center"><span class="badge ${cls}">${pri}</span></td>
+      <td>${action}</td>
+      <td class="center">担当GR</td>
+    </tr>`;
+  });
+  tableA.innerHTML = `
+    <tr><th style="text-align:left;min-width:160px">サービス</th><th style="min-width:60px">優先度</th><th>アクション</th><th style="min-width:70px">担当</th></tr>
+    ${actionRows.join('')}`;
+
+  document.getElementById('footer').textContent = `データ: data.csv　最終更新: ${new Date().toLocaleString('ja-JP')}`;
+}
+
+main().catch(e => {
+  document.getElementById('metrics').innerHTML = `<div style="color:red;padding:1rem">データ読み込みエラー: ${e.message}</div>`;
+});
+</script>
+</body>
+</html>
